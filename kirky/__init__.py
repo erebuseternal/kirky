@@ -1,10 +1,13 @@
 import numpy as np
 from .block import Edge, Block
-from .linsolve import positive_nullspace_vector
+from .linsolve import exact_positive_null_space_vector
 from .draw import DrawEdge
 from pyx import canvas
 from .helpers import common_denominator
-from fractions import Fraction
+from fractions import Fraction, gcd
+from sympy import Matrix, fraction, Rational
+from .linsolve import nullspace
+from degenerate_tableau import solve_kirky
 
 
 class Kirchhoff(object):
@@ -65,7 +68,7 @@ class Kirchhoff(object):
             # for each vertex we have to create as many rows as there are columns in our block
             # each row will correspond to one dependent vector
             for i in range(self.matrix.shape[1]):
-                row = [0 for k in range(len(self.block.frame) + len(self.block.interior))]
+                row = [Fraction(0) for k in range(len(self.block.frame) + len(self.block.interior))]
                 # first we add in the independent vectors to this row
                 for j in range(self.dimensions):
                     # we get the multipler for this independent vector
@@ -73,33 +76,38 @@ class Kirchhoff(object):
                     # now we can add in our independents into the row
                     in_edge, out_edge = vertex.cut[j]
                     if in_edge:
-                        row[in_edge.pin] = -1.0 * multiplier
+                        row[in_edge.pin] = -1 * multiplier
                     if out_edge:
-                        row[out_edge.pin] = 1.0 * multiplier
+                        row[out_edge.pin] = 1 * multiplier
                 # and now we add in the negative of our dependents so that we can solve
                 # for the nullspace later
                 in_edge, out_edge = vertex.cut[self.dimensions + i]
                 if in_edge:
-                    row[in_edge.pin] = 1.0
+                    row[in_edge.pin] = Fraction(1)
                 if out_edge:
-                    row[out_edge.pin] = -1.0
+                    row[out_edge.pin] = Fraction(-1)
                 # and now we can add our row to rows
                 rows.append(row)
-        # now we create a matrix from these rows
-        return np.array(rows)
+        return rows
 
     def solve(self, linear_system):
-        vector_solution = positive_nullspace_vector(linear_system)
+        vector_solution = solve_kirky(linear_system)
         return vector_solution
 
     def normalize_solution(self, vector_solution):
-        # turn the solution to a list for ease of use
-        solution = [vector_solution[i, 0] for i in range(vector_solution.shape[0])]
-        min_element = 0
-        for element in solution:
-            if min_element == 0 or min_element > element and element != 0:
-                min_element = element
-        return [element / min_element for element in solution]
+        # find the least common denominator to get all of these weightings to
+        # be integers
+        denominators = {weight.denominator for weight in vector_solution}
+        while len(denominators) > 1:
+            l = list(denominators)
+            first, second = l[:2]
+            new_denominator = (first / gcd(first, second)) * second
+            denominators.remove(first)
+            denominators.remove(second)
+            denominators.add(new_denominator)
+        common_denominator = list(denominators)[0]
+        normalized_solution = [weight * common_denominator for weight in vector_solution]
+        return normalized_solution
 
     def set_edge_weights(self, solution):
         edges = [edge for edge in self.block.frame] + [edge for edge in self.block.interior]
@@ -126,7 +134,7 @@ class Kirchhoff(object):
         while True:
             print '--> generating linear system'
             linear_system = self.generate_linear_system()
-            print '     size is %s' % (linear_system.shape,)
+            print '     size is %s, %s' % (len(linear_system), len(linear_system[0]))
             print '--> trying to find a solution'
             vector_solution = self.solve(linear_system)
             if vector_solution is None:

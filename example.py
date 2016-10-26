@@ -16,7 +16,11 @@ To generate the Kirchhoff Graph for the matrix
 1 0 -1 1 1
 0 1  1 2 1
 """
-matrix = np.array([[Fraction(-1),Fraction(1),Fraction(1)],[Fraction(1),Fraction(2),Fraction(1)]])
+#matrix = np.array([[Fraction(-1),Fraction(1),Fraction(1)],[Fraction(1),Fraction(2),Fraction(1)]])
+#k = Kirchhoff(matrix)
+#k.find('drawings/kirchhoff2')
+
+matrix = np.array([[Fraction(1)], [Fraction(1)]])
 k = Kirchhoff(matrix)
 k.find('drawings/kirchhoff2')
 
@@ -34,6 +38,6 @@ To generate the Kirchhoff Graph for the matrix
 1 0 -3/2 1/2
 0 1  1/2 1/2
 """
-matrix = np.array([[Fraction(-3,2),Fraction(1,2)], [Fraction(1,2),Fraction(1,2)]])
-k = Kirchhoff(matrix)
-k.find('drawings/kirchhoff4')
+#matrix = np.array([[Fraction(-3,2),Fraction(1,2)], [Fraction(1,2),Fraction(1,2)]])
+#k = Kirchhoff(matrix)
+#k.find('drawings/kirchhoff4')

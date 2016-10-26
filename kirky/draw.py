@@ -24,11 +24,11 @@ def DrawEdge(edge, canvas):
     """
     if not reversed:
         if string and string[0] == '-':
-            canvas.stroke(path.line(tail[0], tail[1], head[0], head[1]), [deco.earrow, deco.curvedtext(string, textattrs=[text.vshift.mathaxis, text.size.tiny], exclude=0.1), color.rgb.red])
+            canvas.stroke(path.line(tail[0], tail[1], head[0], head[1]), [deco.earrow, deco.curvedtext(string, textattrs=[text.halign.left, text.vshift.mathaxis, text.size.tiny], arclenfrombegin=1.2, exclude=0.1), color.rgb.red])
         elif string and string[0] != '-':
-            canvas.stroke(path.line(tail[0], tail[1], head[0], head[1]), [deco.earrow, deco.curvedtext(string, textattrs=[text.vshift.mathaxis, text.size.tiny], exclude=0.1)])
+            canvas.stroke(path.line(tail[0], tail[1], head[0], head[1]), [deco.earrow, deco.curvedtext(string, textattrs=[text.halign.left, text.vshift.mathaxis, text.size.tiny], arclenfrombegin=1.2, exclude=0.1)])
     else:
         if string and string[0] == '-':
-            canvas.stroke(path.line(head[0], head[1], tail[0], tail[1]), [deco.barrow, deco.curvedtext(string, textattrs=[text.vshift.mathaxis, text.size.tiny], exclude=0.1), color.rgb.red])
+            canvas.stroke(path.line(head[0], head[1], tail[0], tail[1]), [deco.barrow, deco.curvedtext(string, textattrs=[text.halign.left, text.vshift.mathaxis, text.size.tiny], arclenfrombegin=1.2, exclude=0.1), color.rgb.red])
         elif string and string[0] != '-':
-            canvas.stroke(path.line(head[0], head[1], tail[0], tail[1]), [deco.barrow, deco.curvedtext(string, textattrs=[text.vshift.mathaxis, text.size.tiny], exclude=0.1)])
+            canvas.stroke(path.line(head[0], head[1], tail[0], tail[1]), [deco.barrow, deco.curvedtext(string, textattrs=[text.halign.left, text.vshift.mathaxis, text.size.tiny], arclenfrombegin=1.2, exclude=0.1)])

@@ -3,7 +3,8 @@ from fractions import Fraction
 import numpy as np
 from numpy.linalg import svd
 from math import sqrt
-
+from .splitter import Splitter
+from sympy import Matrix, Rational
 
 def reflect(_list):
     return [-a for a in _list]
@@ -19,71 +20,6 @@ def normalize(vector):
         return [element for element in vector]
     else:
         return [element / length for element in vector]
-
-
-def divider(vectors, C=1000.0, max_iter=10000, tol=10.0**-13):
-    """
-    divider(vectors) - this function takes a list of vectors (iterables
-    with number elements) and tries to find a hyperplane, passing through
-    the origin that divides the space the vectors lie in into two pieces
-    - one piece having all the vectors and the other piece being empty.
-
-    It does the splitting using a linear kernel support vector machine.
-    Of course svm's require two classes of data points to split. One class
-    is the input vectors. The other class is all of the vector reflections
-    that aren't equal to one of the input vectors.
-
-    It RETURNS the vector that is both normal to the splitting hyperplane
-    and also on the same side as the vectors that were split. If no such vector
-    exists (i.e. the hyperplane doesn't exist) then None is returned.
-    """
-    # first we normalize the vectors
-    vectors = [tuple(normalize(vector)) for vector in vectors]
-    # next we create a set out of these vectors (for easy lookup when we need to
-    # check that reflections are not also equal to an input vector)
-    vectors = set(vectors)
-    # now we create the reflections
-    reflections = [reflect(vector) for vector in vectors if tuple(reflect(vector)) not in vectors]
-    # now that we have our two classes, we can create our training data for the SVM
-    data = [vector for vector in vectors] + reflections
-    # and of course we need the classifications list as well (for the svm)
-    classifications = [0] * len(vectors) + [1] * len(reflections)
-    # now if all of the vectors had their reflection as another input vector. Then all vectors
-    # if they can be split by a plane, all lie in that plane. Now because we are splitting
-    # to get a norm that will give us a positive for the matrix defined by these vectors (as columns)
-    # we call this a failure case because the resultant norm would only give us a zero vector
-    # when multiplied by the matrix because it is pi/2 radians from all column vectors in M
-    if 1 not in classifications:
-        return None
-    # now we create and fit our svm. Note I use a large C by default
-    svm = SVC(kernel='linear', C=C, max_iter=max_iter, tol=tol)
-    svm.fit(data, classifications)
-    # next we grab the normal the svm has found
-    norm = svm.coef_[0].tolist()
-    # okay, so we have our expected norm, time to see if it actually divides the two
-    # it is possible that the norm is the wrong way around, so we will reserve a single flip
-    # the following boolean lets us know if the flip has happened.
-    has_flipped = False
-    for vector in vectors:
-        product = dot(vector, norm)
-        # the norm isn't going to be perfect, so we allow for some leeway in what a zero is
-        # if it passes this and is negative, then we know its too negative to ignore
-        if abs(product) < tol:
-            continue
-        if product > 0 and not has_flipped:
-            # our norm must be on the right side in this case
-            has_flipped = True
-        elif product < 0 and not has_flipped:
-            # we don't want to be tripped up by little errors
-            # we need to flip our norm
-            norm = reflect(norm)
-            has_flipped = True
-        elif product < 0 and has_flipped:
-            print product
-            # we found a vector that's on the wrong side of the plane - game over
-            return None
-    # if we've gotten to this point, then all has passed! so we return the norm
-    return norm
 
 
 def nullspace(matrix, atol=10**-13, rtol=0):
@@ -110,7 +46,7 @@ def nullspace(matrix, atol=10**-13, rtol=0):
     return ns
 
 
-def shave(matrix, tol=10**-13):
+def shave(matrix, tol=10**-12):
     """
     shave(matrix, tol=10**-13) - This function takes a matrix and goes through each of its elements
     using python's Fraction to find the closes number that does not have any part smaller than the
@@ -124,6 +60,18 @@ def shave(matrix, tol=10**-13):
         rows.append(new_row)
     return np.array(rows)
 
+def zero_shave(matrix):
+    rows = []
+    for row in matrix:
+        new_row = []
+        for e in row:
+            if abs(e) <= 10 ** -12:
+                new_row.append(0.0)
+            else:
+                new_row.append(e)
+        rows.append(new_row)
+    return np.array(rows)
+
 
 def positive(matrix):
     """
@@ -134,7 +82,9 @@ def positive(matrix):
     # then we grab the columns
     columns = [row for row in trans]
     # next we use the divider to try to divide the columns
-    norm = divider(columns)
+    splitter = Splitter(columns)
+    norm = splitter.split()
+    print norm
     # we check to make sure the norm exists and thereby division was successful
     if norm is None:
         return None
@@ -146,7 +96,7 @@ def positive(matrix):
     return shave(positive)
 
 
-def positive_nullspace_vector(matrix, verbose=True):
+def positive_null_space_vector(matrix, verbose=True):
     """
     positive_nullspace_vector(matrix) - This function takes a matrix and tries to find
     a nullspace vector that has only positive entries. If it finds one it returns that
@@ -160,7 +110,7 @@ def positive_nullspace_vector(matrix, verbose=True):
         if verbose: print 'nullspace is empty'
         return None
     # we shave off any error
-    N = shave(N)
+    N = zero_shave(N)
     # now to generate the positive we need to transpose N, because right not the nullspace vectors
     # are its columns and we need them to be rows for this to work properly
     N = np.transpose(N)
@@ -177,3 +127,30 @@ def positive_nullspace_vector(matrix, verbose=True):
         # in this case no positive was found
         if verbose: print 'no positive found'
         return None
+
+def exact_positive_null_space_vector(matrix, verbose=True):
+    N = matrix.nullspace()
+    if len(N) == 0:
+        print 'no nullspace found'
+        return None
+    rows = []
+    # we grab the rows of this matrix as our vectors
+    for i in range(N[0].shape[0]):
+        row = []
+        for column in N:
+            row.append(Fraction(column[i,0].p, column[i,0].q))
+        rows.append(row)
+    splitter = Splitter(rows, exact=True)
+    norm = splitter.split()
+    if norm is None:
+        print 'no norm found'
+        return None
+    # now we make the transpose of N
+    rows = []
+    for column in N:
+        row = [e for e in column]
+        rows.append(row)
+    trans = Matrix(rows)
+    symp_norm = Matrix([[Rational(e.numerator, e.denominator) for e in norm]])
+    result = symp_norm * trans
+    return result.T
