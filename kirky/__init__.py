@@ -21,7 +21,7 @@ class Kirchhoff(object):
 
         NOTES:
             (a) we determine the number of dimensions our frame will have
-            (b) the number of vectors we will have is equal to the number of cross vectors
+            (b) the number of vectors we will have is equal to the number of coordinate vectors
                 (given by the dimensions of the frame) plus the number of cross vectors
                 (given by the number of columns in our matrix)
             (c) we determine how closely the vertices in the frame will be to each other
