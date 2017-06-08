@@ -4,7 +4,7 @@ from .draw import DrawEdge
 from pyx import canvas
 from .helpers import common_denominator
 from fractions import Fraction, gcd
-from .tableau import solve_kirky
+from .extension_solver import solve_kirky_with_extension as solve_kirky
 
 
 class Kirchhoff(object):
