@@ -6,6 +6,16 @@ from copy import deepcopy
 """
 For information on the extension being used see: http://cvxopt.org/userguide/coneprog.html#linear-programming
 """
+def resolve_repeating_fraction(rf):
+    ACCUR = 13
+    for q in range(1, 14):
+        for k in range(1, q + 1):
+            attempt = Fraction(rf).limit_denominator(10**q*10**(k-1))
+            print (float(attempt) -rf)
+            if abs(float(attempt) - rf) < 10**-12:
+                return attempt
+
+
 def float_matrix(A):
     F = []
     for row in A:
@@ -143,72 +153,33 @@ def check_solution(Au, ibos):
 
 
 def solve_kirky_with_extension(E):
-    E = reduce_matrix(E)
-    Au = create_augmented_matrix(E)
-    solution = grab_solution(Au)
-    print solution
+    solution = grab_solution(E)
     if not solution:
         return
     else:
-        return solution[:-1]
+        return solution
+
+def clean_solution(solution):
+    def drop(e):
+        if abs(e) < 10 ** -8:
+            return 0.0
+        else:
+            return e
+    return [drop(e) for e in solution]
 
 def grab_solution(E):
+    E = reduce_matrix(E)
     Au = create_augmented_matrix(E)
-    print 'NEW NUMBER IF COLS: %s' % len(Au[0])
     solution = get_solution(Au)
     print solution['primal objective']
     if solution['primal objective'] > 10 ** -5: #TODO better decision making here
         return
     else:
-        # now I want to grab the biggest n where n is the number of rows in Au...
-        # so we're getting a basis w.r.t to our huge system... So that's what
-        # we really need to get at.
         m = len(Au[0])
-        print solution['x']
-        important_bits_of_solution = [x for x in solution['x']][:m]
-        check_solution(Au, important_bits_of_solution)
-        n = len(Au)
-        maxes = set()
-        for i in range(n):
-            _max = max(important_bits_of_solution)
-            for j in range(len(important_bits_of_solution)):
-                if important_bits_of_solution[j] == _max:
-                    important_bits_of_solution.pop(j)
-                    break
-            maxes.add(_max)
-        print 'MAXES: %s' % maxes
-        basis = []
-        for i in range(m):
-            if solution['x'][i] in maxes:
-                basis.append(i)
-        # now we create an augmented, augmented matrix (we're adding b to the end of Au
-	print 'RANK: %s' % matrix_rank(array(float_matrix(Au)))
-        print 'N: %s' % len(Au)
-        print 'M: %s' % m
-        print 'IN BASIS: %s' % len(basis)
-        if rank_of_basis(Au, basis) < matrix_rank(array(float_matrix(Au))):
-            basis = [c for c in basis if c != (m - 1)]
-            B = []
-    	    for r in range(len(Au) - 1):
-                B.append([Au[r][c] for c in basis])
-            print '%s NUMBER OF COLS' % len(B[0])
-            B = reduce_matrix(B)
-            print 'recursing now'
-            small_solution = grab_solution(B)
-            print len(basis)
-            print len(small_solution)
-            solution = [Fraction(0)] * (m - 1)
-            print len(solution)
-            for x in range(len(basis)):
-                print basis[x]
-                solution[basis[x]] = small_solution[x]
-            return solution
-        b = get_b(Au)
-        for i in range(n):
-            Au[i].append(b[i])    # we augement each row with the corresponding element from b
-        cleaned_solution = grab_exact_solution(Au, basis)[:-1]
-        print cleaned_solution
-        return cleaned_solution
+        important_bits_of_solution = [x for x in solution['x']][:m-1]
+        c_solution = clean_solution(important_bits_of_solution)
+        print c_solution
+        return c_solution
 
 """
 So it's definitely finding a good solution, and it's finding the right basis...

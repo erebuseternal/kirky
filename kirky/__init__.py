@@ -4,7 +4,8 @@ from .draw import DrawEdge
 from pyx import canvas
 from .helpers import common_denominator
 from fractions import Fraction, gcd
-from .extension_solver import solve_kirky_with_extension as solve_kirky
+from .tableau import solve_kirky
+from .extension_solver import solve_kirky_with_extension
 
 
 class Kirchhoff(object):
@@ -145,6 +146,8 @@ class Kirchhoff(object):
         """
         edges = [edge for edge in self.frame.coordinate_vectors] + [edge for edge in self.frame.cross_vectors]
         edges = sorted(edges, key=lambda edge: edge.pin)
+        print len(edges)
+        print len(solution)
         for i in range(len(edges)):
             edges[i].weight = solution[i]
 
@@ -162,7 +165,7 @@ class Kirchhoff(object):
             DrawEdge(edge, canvas)
             count += 1
 
-    def find(self, file=''):
+    def find(self, file='', exact=True):
         """
         This is the meat of the algorithm. It takes the frame and runs the steps outlined
         in the report. So if you've read the report this should be pretty self explanatory.
@@ -172,8 +175,11 @@ class Kirchhoff(object):
             print '--> generating linear system'
             linear_system = self.generate_linear_system()
             print '     size is %s, %s' % (len(linear_system), len(linear_system[0]))
-            print '--> trying to find a solution'
-            vector_solution = self.solve(linear_system)
+            print '--> trying to find aa solution'
+            if exact:
+            	vector_solution = self.solve(linear_system)
+            else:
+                vector_solution = solve_kirky_with_extension(linear_system)
             if vector_solution is None:
                 print '--> solution not found'
                 print '--> doubling along dimension %s' % dimension
@@ -181,8 +187,9 @@ class Kirchhoff(object):
                 dimension = (dimension + 1) % self.dimensions
             else:
                 break
-        solution = self.normalize_solution(vector_solution)
-        self.set_edge_weights(solution)
+        if exact:
+            vector_solution = self.normalize_solution(vector_solution)
+        self.set_edge_weights(vector_solution)
         if file:
             c = canvas.canvas()
             self.draw_edges(c)
